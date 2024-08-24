@@ -122,4 +122,24 @@ public class AuthenticationService {
                 .build();
     }
 
+    public void activateAccount(String token) throws MessagingException {
+        var tokenEntity = tokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalStateException("Token not found"));
+
+        if (tokenEntity.getValidatedAt() != null) {
+            throw new IllegalStateException("Token already validated");
+        }
+
+        if (tokenEntity.getExpiresAt().isBefore(LocalDateTime.now())) {
+            sendValidationEmail(tokenEntity.getUser());
+            throw new RuntimeException("Token expired");
+        }
+
+        var user = tokenEntity.getUser();
+        user.setEnabled(true);
+        userRepository.save(user);
+        tokenEntity.setValidatedAt(LocalDateTime.now());
+        tokenRepository.save(tokenEntity);
+    }
+
 }
