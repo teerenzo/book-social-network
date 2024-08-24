@@ -1,6 +1,7 @@
 package com.renzo.book.auth;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +28,12 @@ public class AuthenticationController {
             throws MessagingException {
         authenticationService.register(registrationRequest);
         return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/authenticate")
+    public ResponseEntity<AuthenticationResponse> authenticate(
+            @RequestBody @Valid AuthenticationRequest authenticateRequest) {
+        return ResponseEntity.ok(authenticationService.authenticate(authenticateRequest));
     }
 
 }

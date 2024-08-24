@@ -1,20 +1,25 @@
 package com.renzo.book.auth;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.renzo.book.email.EmailService;
 import com.renzo.book.email.EmailTemplateName;
 import com.renzo.book.role.RoleRepository;
+import com.renzo.book.security.JwtService;
 import com.renzo.book.user.Token;
 import com.renzo.book.user.TokenRepository;
 import com.renzo.book.user.User;
 import com.renzo.book.user.UserRepository;
 
 import jakarta.mail.MessagingException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import java.util.HashMap;
 import java.util.List;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -31,6 +36,8 @@ public class AuthenticationService {
 
     private final TokenRepository tokenRepository;
     private final EmailService emailService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
 
     @Value("${application.mailing.frontend.activation-url}")
     private String activationUrl;
@@ -91,6 +98,28 @@ public class AuthenticationService {
         }
 
         return stringBuilder.toString();
+    }
+
+    public AuthenticationResponse authenticate(@Valid AuthenticationRequest authenticateRequest) {
+        var auth = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        authenticateRequest.getEmail(),
+                        authenticateRequest.getPassword()));
+        System.out.println("Auth: " + auth);
+
+        var claims = new HashMap<String, Object>();
+        var user = ((User) auth.getPrincipal());
+        claims.put("email", user.getEmail());
+        claims.put("roles", user.getRoles());
+        claims.put("fullname", user.fullName());
+
+        var jwtToken = jwtService.generateToken(claims, user);
+
+        System.out.println("Token: " + jwtToken);
+
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .build();
     }
 
 }

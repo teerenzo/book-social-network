@@ -1,6 +1,5 @@
 package com.renzo.book.security;
 
-import org.hibernate.mapping.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,6 +14,7 @@ import java.util.HashMap;
 import java.security.Key;
 import java.util.Date;
 import java.util.function.Function;
+import java.util.Map;
 
 @Service
 public class JwtService {
@@ -32,24 +32,24 @@ public class JwtService {
     }
 
     public String generateToken(
-            Object extraClaims,
+            Map<String, Object> extraClaims,
             UserDetails userDetails) {
 
         return buildToken(extraClaims, userDetails, jwtExpiration);
     }
 
     public String buildToken(
-            Object extraClaims,
+            Map<String, Object> extraClaims,
             UserDetails userDetails,
             long expiration) {
         var authorities = userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
 
         return Jwts.builder()
-                .setClaims((Claims) extraClaims)
-                .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .claim("authorities", authorities)
+                .claims().add(extraClaims).add("authorities", authorities)
+                .subject(userDetails.getUsername())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .and()
                 .signWith(getSignInKey()).compact();
 
     }
@@ -65,8 +65,7 @@ public class JwtService {
     }
 
     private Claims extractAllClaims(String jwt) {
-        return Jwts
-                .parserBuilder()
+        return Jwts.parser()
                 .setSigningKey(getSignInKey())
                 .build()
                 .parseClaimsJws(jwt)
